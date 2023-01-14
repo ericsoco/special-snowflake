@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "p5": "/node_modules/p5"
+  }
+}

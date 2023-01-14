@@ -1,0 +1,27 @@
+{
+  "name": "special-snowflake",
+  "version": "0.0.1",
+  "description": "You are a special snowflake.",
+  "packageManager": "yarn@3.3.1",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Tests? Where we're going, we don't need tests.\" && exit 1",
+    "start": "http-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ericsoco/special-snowflake.git"
+  },
+  "author": "ericsoco",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ericsoco/special-snowflake/issues"
+  },
+  "homepage": "https://github.com/ericsoco/special-snowflake#readme",
+  "dependencies": {
+    "p5": "^1.5.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
