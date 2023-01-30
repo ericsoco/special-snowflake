@@ -1,6 +1,9 @@
-export default function (p5) {
-  console.log('p5-main p5:', p5);
+import {
+  initFactory as initSilhouetteFactory,
+  create as createSilhouette
+} from './silhouette.js';
 
+export default function (p5) {
   //
   // consts
   //
@@ -33,11 +36,7 @@ export default function (p5) {
     keys[SPAWN_MODES[i]] = i;
     return keys;
   }, {});
-  const SILHOUETTE_SIZE = {
-    w: 100,
-    h: 220
-  };
-
+  
   //
   // vars
   //
@@ -57,12 +56,8 @@ export default function (p5) {
   let emitterSpawnMode = 0;
   let emitterSpawnClicked = false;
 
-  let silhouette = {
-    x0: (BOUNDS.w - SILHOUETTE_SIZE.w)/2,
-    x1: (BOUNDS.w + SILHOUETTE_SIZE.w)/2,
-    y0: (BOUNDS.h - SILHOUETTE_SIZE.h)/2,
-    y1: (BOUNDS.h + SILHOUETTE_SIZE.h)/2
-  };
+  initSilhouetteFactory(p5, BOUNDS);
+  let silhouette = createSilhouette();
 
   /**
    * Attach p5 setup() method to p5 instance
@@ -86,17 +81,20 @@ export default function (p5) {
     g2.colorMode(p5.RGB, 255, 255, 255, 1);
   };
 
-  // TODO: kludge to make previously-global consts+vars
-  // available to fns down the call graph
-  const vars = {
-    BOUNDS,
-    debug,
-    spawnMode,
-    SPAWN,
-    silhouette
-  };
-
+  /**
+   * Attach p5 draw() method to p5 instance
+   */
   p5.draw = () => {
+    // TODO: kludge to make previously-global consts+vars
+    // available to fns down the call graph
+    const vars = {
+      BOUNDS,
+      debug,
+      spawnMode,
+      SPAWN,
+      silhouette
+    };
+    
     g3.push()
     g3.translate(-BOUNDS.w/2, -BOUNDS.h/2);
     g2.push()
@@ -106,11 +104,37 @@ export default function (p5) {
     g3.pop();
     g2.pop();
   };
+
+  /**
+   * Attach p5 keyPressed() method to p5 instance
+   */
+  p5.keyPressed = () => {
+    // SPACE to switch spawn modes
+    if (p5.keyCode ===  32) {
+      const prevMode = SPAWN_MODES[spawnMode];
+      spawnMode = (spawnMode + 1) % SPAWN_MODES.length;
+      console.log(`${prevMode} --> ${SPAWN_MODES[spawnMode]}`);
+    }
+  }
+
+  /**
+   * Attach p5 mouseClicked() method to p5 instance
+   */
+  p5.mouseClicked = () => {
+    if (spawnMode === SPAWN.CLICK) {
+      spawnClicked = true;
+    }
+    
+    if (emitterSpawnMode === SPAWN.CLICK) {
+      emitterSpawnClicked = true;
+    }
+  }
+
 };
 
-function updateEnv(p5, g2, g3, vars) {
+function updateEnv(p5, g2, g3, {silhouette, spawnMode, SPAWN}) {
   updateLight(g3);
-  updateSilhouette(p5, vars);
+  silhouette.update(spawnMode, SPAWN);
   
   /*
   spawnEmitter();
@@ -135,19 +159,7 @@ function updateLight(g3) {
   );
 }
 
-function updateSilhouette(p5, {spawnMode, SPAWN, silhouette}) {
-  // move silhouette only when in auto mode
-  if (spawnMode !== SPAWN.AUTO) return;
-  
-  const centerX = p5.lerp((silhouette.x0 + silhouette.x1)/2, mouseX, 0.2);
-  const centerY = p5.lerp((silhouette.y0 + silhouette.y1)/2, mouseY, 0.2);
-  silhouette.x0 = centerX - 0.5 * SILHOUETTE_SIZE.w;
-  silhouette.x1 = centerX + 0.5 * SILHOUETTE_SIZE.w;
-  silhouette.y0 = centerY - 0.5 * SILHOUETTE_SIZE.h;
-  silhouette.y1 = centerY + 0.5 * SILHOUETTE_SIZE.h;
-}
-
-function render(p5, g2, g3, {BOUNDS, debug}) {
+function render(p5, g2, g3, {BOUNDS, debug, silhouette}) {
   p5.background(230);
   
   // particle trails
@@ -166,7 +178,7 @@ function render(p5, g2, g3, {BOUNDS, debug}) {
   
   // particles.forEach(drawParticle);
   // emitters.forEach(drawEmitter);
-  // drawSilhouette();
+  silhouette.draw(g2);
   
   p5.image(g3, 0, 0);
   
