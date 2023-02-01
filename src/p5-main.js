@@ -3,40 +3,44 @@ import {
   create as createSilhouette
 } from './silhouette.js';
 
+import {
+  initFactory as initEmitterFactory,
+  spawnEmitter,
+  updateEmitters,
+  drawEmitters
+} from './emitter.js';
+
+//
+// consts
+//
+const BW = 1600;
+const BH = 900;
+const BOUNDS = {
+  w: BW,
+  h: BH,
+  diag: Math.sqrt(BW*BW, BH*BH)
+};
+
+const SQRT_THREE = Math.pow(3, 0.5);
+
+const PARTICLE_SPEED = {min: 1, max: 3};
+const PARTICLE_ROT_SPEED = {min: 0.02, max: 0.08};
+const PARTICLE_TGT_VAR = {min: -0.05, max: 0.05};
+const PARTICLE_BOUNCE_ANG_VAR = {min: -0.1, max: 0.1};
+const PARTICLE_BOUNCE_VAR = {min: -0.25, max: 0.1};
+const PARTICLE_BOUNCE_SPEED = {min: 5, max: 20};
+const SPAWN_MODES = [
+  'CLICK',
+  'CURSOR',
+  'AUTO'
+];
+const SPAWN = SPAWN_MODES.reduce((keys, key, i) => {
+  keys[SPAWN_MODES[i]] = i;
+  return keys;
+}, {});
+
+
 export default function (p5) {
-  //
-  // consts
-  //
-  const BOUNDS = {
-    w: 1600,
-    h: 900
-  };
-  BOUNDS.diag = Math.sqrt(BOUNDS.w*BOUNDS.w, BOUNDS.h*BOUNDS.h);
-  const SQRT_THREE = Math.pow(3, 0.5);
-  const EMITTER_OVERFLOW = BOUNDS.w / 2;
-  const EMITTER_BOUNDS = {
-    x0: -EMITTER_OVERFLOW,
-    x1: BOUNDS.w + EMITTER_OVERFLOW,
-    y0: -EMITTER_OVERFLOW,
-    y1: BOUNDS.h + EMITTER_OVERFLOW
-  };
-  const SPAWN_DELAY = {min: 2, max: 10};
-  const PARTICLE_SPEED = {min: 1, max: 3};
-  const PARTICLE_ROT_SPEED = {min: 0.02, max: 0.08};
-  const PARTICLE_TGT_VAR = {min: -0.05, max: 0.05};
-  const PARTICLE_BOUNCE_ANG_VAR = {min: -0.1, max: 0.1};
-  const PARTICLE_BOUNCE_VAR = {min: -0.25, max: 0.1};
-  const PARTICLE_BOUNCE_SPEED = {min: 5, max: 20};
-  const SPAWN_MODES = [
-    'CLICK',
-    'CURSOR',
-    'AUTO'
-  ];
-  const SPAWN = SPAWN_MODES.reduce((keys, key, i) => {
-    keys[SPAWN_MODES[i]] = i;
-    return keys;
-  }, {});
-  
   //
   // vars
   //
@@ -88,13 +92,11 @@ export default function (p5) {
     // TODO: kludge to make previously-global consts+vars
     // available to fns down the call graph
     const vars = {
-      BOUNDS,
       debug,
       spawnMode,
-      SPAWN,
       silhouette
     };
-    
+
     g3.push()
     g3.translate(-BOUNDS.w/2, -BOUNDS.h/2);
     g2.push()
@@ -132,10 +134,14 @@ export default function (p5) {
 
 };
 
-function updateEnv(p5, g2, g3, {silhouette, spawnMode, SPAWN}) {
+function updateEnv(p5, g2, g3, {silhouette, spawnMode}) {
   updateLight(g3);
   silhouette.update(spawnMode, SPAWN);
-  
+
+  updateEmitters();
+  // TODO: updateEmitters should take care of all the logic below --
+  // update emitters and their particles
+
   /*
   spawnEmitter();
   for (let i=emitters.length-1; i>=0; i--) {
@@ -159,7 +165,7 @@ function updateLight(g3) {
   );
 }
 
-function render(p5, g2, g3, {BOUNDS, debug, silhouette}) {
+function render(p5, g2, g3, {debug, silhouette}) {
   p5.background(230);
   
   // particle trails
@@ -176,8 +182,13 @@ function render(p5, g2, g3, {BOUNDS, debug, silhouette}) {
   g3._renderer.GL.clear(g3._renderer.GL.DEPTH_BUFFER_BIT);
   g2.clear();
   
+  drawEmitters();
+  // TODO: drawEmitters should take care of all the logic below --
+  // draw emitters and their particles
+  
   // particles.forEach(drawParticle);
   // emitters.forEach(drawEmitter);
+
   silhouette.draw(g2);
   
   p5.image(g3, 0, 0);
