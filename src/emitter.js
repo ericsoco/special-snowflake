@@ -25,7 +25,7 @@ class Emitter {
 
   draw(g) {
     g.ellipseMode(p5.RADIUS);
-    g.stroke(20, 20, 50);
+    g.stroke(200, 20, 50);
     g.noFill();
     g.circle(this.loc.x, this.loc.y, 10);
   }
@@ -71,6 +71,6 @@ export function drawEmitters(g) {
 
 export const SPAWN_DELAY = {min: 2, max: 10};
 export function getSpawnTime() {
-  return Math.round(Math.random(SPAWN_DELAY.min, SPAWN_DELAY.max));
+  return Math.round(p5.random(SPAWN_DELAY.min, SPAWN_DELAY.max));
 }
 
