@@ -1,5 +1,3 @@
-const SPAWN_DELAY = {min: 2, max: 10};
-
 let p5 = null;
 let EMITTER_OVERFLOW;
 let EMITTER_BOUNDS;
@@ -11,20 +9,18 @@ class Emitter {
   loc;
   count;
   next;
-  particles;
 
   constructor(loc) {
     this.loc = loc;
     this.count = 0;
     this.next = getSpawnTime();
-    this.particles = [];
   }
 
-  update() {
+  update(spawnParticle) {
     if (this.count++ > this.next) {
       this.count = 0;
       this.next = getSpawnTime();
-      return createParticle(this.loc);
+      return spawnParticle(this.loc);
     }
   }
 
@@ -33,10 +29,6 @@ class Emitter {
     g.stroke(20, 20, 50);
     g.noFill();
     g.circle(this.loc.x, this.loc.y, 10);
-  }
-
-  createParticle(loc) {
-    // TODO
   }
 }
 
@@ -81,19 +73,15 @@ export function spawnEmitter() {
  * Update all existing emitters and
  * create new emitters if queued
  */
-export function updateEmitters() {
-  switch (spawnMode) {
-    case SPAWN.CLICK:
-      if (emitterSpawnClicked) {
-        emitters.push(create(true));
-        spawnQueued = false;
-      }
-      break;
+export function updateEmitters(spawnParticle) {
+  if (spawnQueued) {
+    emitters.push(create(true));
+    spawnQueued = false;
   }
 
   for (let i=emitters.length-1; i>=0; i--) {
-    const em = emitters[i];
-    em.update();
+    const e = emitters[i];
+    e.update(spawnParticle);
   };
 }
 
@@ -101,6 +89,8 @@ export function drawEmitters(g) {
   emitters.forEach(e => e.draw(g));
 }
 
-function getSpawnTime() {
+export const SPAWN_DELAY = {min: 2, max: 10};
+export function getSpawnTime() {
   return Math.round(Math.random(SPAWN_DELAY.min, SPAWN_DELAY.max));
 }
+

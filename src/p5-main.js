@@ -7,8 +7,17 @@ import {
   initFactory as initEmitterFactory,
   spawnEmitter,
   updateEmitters,
-  drawEmitters
+  drawEmitters,
+  getSpawnTime,
+  SPAWN_DELAY
 } from './emitter.js';
+
+import {
+  initFactory as initParticleFactory,
+  spawnParticle,
+  updateParticles,
+  drawParticles
+} from './particle.js';
 
 //
 // consts
@@ -47,18 +56,13 @@ export default function (p5) {
   let g2;  // 2D buffer
   let g3;  // 3D buffer
   let debug = false;
-  let particles = [];
-  let particleCount = 0;
-  let nextSpawnDelay = SPAWN_DELAY.min;
 
   // let spawnMode = SPAWN_MODES.indexOf(SPAWN.CLICK);
   let spawnMode = 0;
-  let spawnClicked = false;
+  let spawnQueue = resetSpawnQueue();
 
-  let emitters = [];
-  // let emitterSpawnMode = SPAWN_MODES.indexOf(SPAWN.CLICK);
-  let emitterSpawnMode = 0;
-  let emitterSpawnClicked = false;
+  initParticleFactory(p5, BOUNDS);
+  initEmitterFactory(p5, BOUNDS);
 
   initSilhouetteFactory(p5, BOUNDS);
   let silhouette = createSilhouette();
@@ -94,6 +98,7 @@ export default function (p5) {
     const vars = {
       debug,
       spawnMode,
+      spawnQueue,
       silhouette
     };
 
@@ -101,8 +106,12 @@ export default function (p5) {
     g3.translate(-BOUNDS.w/2, -BOUNDS.h/2);
     g2.push()
     g2.translate(-BOUNDS.w/2, -BOUNDS.h/2);
-    updateEnv(p5, g2, g3, vars);
+
+    updateEnv(g3, vars);
+    spawnQueue = spawnObjects(p5, vars);
+    updateObjects(vars);
     render(p5, g2, g3, vars);
+
     g3.pop();
     g2.pop();
   };
@@ -124,37 +133,16 @@ export default function (p5) {
    */
   p5.mouseClicked = () => {
     if (spawnMode === SPAWN.CLICK) {
-      spawnClicked = true;
+      spawnQueue.particle = true;
     }
-    
-    if (emitterSpawnMode === SPAWN.CLICK) {
-      emitterSpawnClicked = true;
-    }
+    spawnQueue.emitter = true;
   }
 
 };
 
-function updateEnv(p5, g2, g3, {silhouette, spawnMode}) {
+function updateEnv(g3, {silhouette, spawnMode}) {
   updateLight(g3);
   silhouette.update(spawnMode, SPAWN);
-
-  updateEmitters();
-  // TODO: updateEmitters should take care of all the logic below --
-  // update emitters and their particles
-
-  /*
-  spawnEmitter();
-  for (let i=emitters.length-1; i>=0; i--) {
-    const em = emitters[i];
-    updateEmitter(em, i);
-  };
-  
-  spawnParticle();
-  for (let i=particles.length-1; i>=0; i--) {
-    const pt = particles[i];
-    updateParticle(pt, i);
-  };
-  */
 }
 
 function updateLight(g3) {
@@ -163,6 +151,49 @@ function updateLight(g3) {
     250, 250, 250,
     0, 0, -1
   );
+}
+
+function spawnObjects(p5, {spawnMode, spawnQueue}) {
+  if (spawnQueue.emitter) {
+    spawnEmitter();
+  }
+
+  switch (spawnMode) {
+    case SPAWN.CLICK:
+      if (spawnQueue.particle) {
+        spawnParticle();
+      }
+      break;
+    case SPAWN.CURSOR:
+      if (p5.frameCount % spawnQueue.nextSpawn === 0) {
+        spawnParticle();
+      }
+      break;
+    case SPAWN.AUTO:
+      updateEmitters(spawnParticle);
+      break;
+  }
+
+  return resetSpawnQueue();
+}
+
+function resetSpawnQueue() {
+  return {
+    emitter: false,
+    particle: false,
+    nextSpawn: getSpawnTime()
+  };
+}
+
+function updateObjects({spawnMode}) {
+  /*
+  // I think we don't need this anymore?
+  if (spawnMode === SPAWN.AUTO) {
+    updateEmitters(spawnParticle);
+  }
+  */
+
+  updateParticles();
 }
 
 function render(p5, g2, g3, {debug, silhouette}) {
@@ -182,7 +213,7 @@ function render(p5, g2, g3, {debug, silhouette}) {
   g3._renderer.GL.clear(g3._renderer.GL.DEPTH_BUFFER_BIT);
   g2.clear();
   
-  drawEmitters();
+  drawEmitters(g2);
   // TODO: drawEmitters should take care of all the logic below --
   // draw emitters and their particles
   
@@ -205,10 +236,6 @@ function render(p5, g2, g3, {debug, silhouette}) {
 
 function placeEmitter() {
   // TODO
-}
-
-function getSpawnTime() {
-  return round(random(SPAWN_DELAY.min, SPAWN_DELAY.max));
 }
 
 function createParticle(emitterLoc) {
@@ -262,27 +289,6 @@ function spawnParticle() {
   }
 }
 
-function createEmitter (fromMouse) {
-  const loc = createVector(mouseX, mouseY);
-  
-  return {
-    loc,
-    count: 0,
-    next: getSpawnTime()
-  };
-}
-
-function spawnEmitter() {
-  switch (spawnMode) {
-    case SPAWN.CLICK:
-      if (emitterSpawnClicked) {
-        emitters.push(createEmitter(true));
-        emitterSpawnClicked = false;
-      }
-      break;
-  }
-}
-
 function updateParticle(p, i) {
   p.loc.add(p.spd);
   
@@ -315,10 +321,6 @@ function checkForCollision(p)  {
     p.loc.y > silhouette.y0 &&
     p.loc.y < silhouette.y1
   );
-}
-
-function updateEmitter(e, i) {
-  e.count++;
 }
 
 function emitParticle(e) {
@@ -355,13 +357,6 @@ function drawParticle(p) {
   g3.pop();
 }
 
-function drawEmitter(e) {
-  g2.ellipseMode(RADIUS);
-  g2.stroke(20, 20, 50);
-  g2.noFill();
-  g2.circle(e.loc.x, e.loc.y, 10);
-}
-
 function drawSilhouette() {
   g2.noFill();
   g2.stroke(80, 155, 40);
@@ -369,77 +364,5 @@ function drawSilhouette() {
   g2.rect(silhouette.x0, silhouette.y0, silhouette.x1, silhouette.y1);
 }
 
-function updateEnv() {
-  updateLight();
-  updateSilhouette();
-  
-  spawnEmitter();
-  for (let i=emitters.length-1; i>=0; i--) {
-    const em = emitters[i];
-    updateEmitter(em, i);
-  };
-  
-  spawnParticle();
-  for (let i=particles.length-1; i>=0; i--) {
-    const pt = particles[i];
-    updateParticle(pt, i);
-  };
-  
-}
 
-function render() {
-  background(230);
-  
-  // particle trails
-  g3.noStroke();
-  g3.fill(230, 0.5);
-  g3.rect(0, 0, BOUNDS.w, BOUNDS.h);
-  // Depth buffer is supposed to be cleared on every update()
-  // https://github.com/processing/p5.js/blob/main/src/webgl/p5.RendererGL.js#L583
-  // ...but perhaps update() is not called on renderer that is not
-  // the main context (createGraphics vs createCanvas(GL)).
-  // clear() only clears color buffer
-  // https://github.com/processing/p5.js/blob/main/src/webgl/p5.RendererGL.js#L595
-  // ...so manually clear only the depth buffer.
-  g3._renderer.GL.clear(g3._renderer.GL.DEPTH_BUFFER_BIT);
-  g2.clear();
-  
-  particles.forEach(drawParticle);
-  emitters.forEach(drawEmitter);
-  drawSilhouette();
-  
-  image(g3, 0, 0);
-  
-  if (debug) image(g2, 0, 0);
-}
-
-function draw() {
-  g3.push()
-  g3.translate(-BOUNDS.w/2, -BOUNDS.h/2);
-  g2.push()
-  g2.translate(-BOUNDS.w/2, -BOUNDS.h/2);
-  updateEnv();
-  render();
-  g3.pop();
-  g2.pop();
-}
-
-function keyPressed() {
-  // SPACE to switch spawn modes
-  if (keyCode ===  32) {
-    const prevMode = SPAWN_MODES[spawnMode];
-    spawnMode = (spawnMode + 1) % SPAWN_MODES.length;
-    console.log(`${prevMode} --> ${SPAWN_MODES[spawnMode]}`);
-  }
-}
-
-function mouseClicked() {
-  if (spawnMode === SPAWN.CLICK) {
-    spawnClicked = true;
-  }
-  
-  if (emitterSpawnMode === SPAWN.CLICK) {
-    emitterSpawnClicked = true;
-  }
-}
 */
