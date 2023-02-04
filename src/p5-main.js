@@ -155,18 +155,18 @@ function updateLight(g3) {
 
 function spawnObjects(p5, {spawnMode, spawnQueue}) {
   if (spawnQueue.emitter) {
-    spawnEmitter();
+    spawnEmitter(getMouseLoc(p5));
   }
 
   switch (spawnMode) {
     case SPAWN.CLICK:
       if (spawnQueue.particle) {
-        spawnParticle();
+        spawnParticle(getMouseLoc(p5));
       }
       break;
     case SPAWN.CURSOR:
       if (p5.frameCount % spawnQueue.nextSpawn === 0) {
-        spawnParticle();
+        spawnParticle(getMouseLoc(p5));
       }
       break;
     case SPAWN.AUTO:
@@ -175,6 +175,13 @@ function spawnObjects(p5, {spawnMode, spawnQueue}) {
   }
 
   return resetSpawnQueue();
+}
+
+function getMouseLoc(p5) {
+  return {
+    x: p5.mouseX,
+    y: p5.mouseY
+  };
 }
 
 function resetSpawnQueue() {
@@ -267,26 +274,6 @@ function createParticle(emitterLoc) {
     size: 4,
     id: particleCount++
   };
-}
-
-function spawnParticle() {
-  switch (spawnMode) {
-    case SPAWN.CLICK:
-      if (spawnClicked) {
-        particles.push(createParticle());
-        spawnClicked = false;
-      }
-      break;
-    case SPAWN.CURSOR:
-      if (frameCount % nextSpawnDelay === 0) {
-        particles.push(createParticle());
-        nextSpawnDelay = getSpawnTime();
-      }
-      break;
-    case SPAWN.AUTO:
-      emitters.forEach(emitParticle);
-      break;
-  }
 }
 
 function updateParticle(p, i) {

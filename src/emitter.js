@@ -2,7 +2,6 @@ let p5 = null;
 let EMITTER_OVERFLOW;
 let EMITTER_BOUNDS;
 
-let spawnQueued = false;
 let emitters = [];
 
 class Emitter {
@@ -47,26 +46,12 @@ export function initFactory(_p5, bounds) {
   };
 }
 
-/**
- * Instantiate an emitter
- */
-function create(fromMouse) {
-  if (!p5) {
-    throw new Error('Provide p5 reference before instantiating, via initFactory()');
-  }
-
-  const loc = fromMouse
-    ? p5.createVector(p5.mouseX, p5.mouseY)
-    : p5.createVector(0, 0);
-  
-  return new Emitter(loc);
-}
 
 /**
- * Queue creation of emitter on next update
+ * Create emitter
  */
-export function spawnEmitter() {
-  spawnQueued = true;
+export function spawnEmitter(loc) {
+  emitters.push(new Emitter(loc));
 }
 
 /**
@@ -74,11 +59,6 @@ export function spawnEmitter() {
  * create new emitters if queued
  */
 export function updateEmitters(spawnParticle) {
-  if (spawnQueued) {
-    emitters.push(create(true));
-    spawnQueued = false;
-  }
-
   for (let i=emitters.length-1; i>=0; i--) {
     const e = emitters[i];
     e.update(spawnParticle);

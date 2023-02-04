@@ -40,7 +40,7 @@ function create(fromMouse) {
  * Spawn particle
  */
 export function spawnParticle(loc) {
-  console.log(`TODO: spawnParticle at ${loc}`);
+  console.log('TODO: spawnParticle at', loc);
 }
 
 /**
